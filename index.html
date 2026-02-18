@@ -385,6 +385,10 @@
       <input type="text" id="uploadSource" placeholder="Source name">
     </div>
     <div class="upload-field">
+      <label>Credit</label>
+      <input type="text" id="uploadCredit" placeholder="Attribution / credit line">
+    </div>
+    <div class="upload-field">
       <label>Link</label>
       <input type="text" id="uploadLink" placeholder="https://...">
     </div>
@@ -589,6 +593,7 @@ function prepUpload(){
   document.getElementById('uploadName').value='';
   document.getElementById('uploadType').value='';
   document.getElementById('uploadSource').value='';
+  document.getElementById('uploadCredit').value='';
   document.getElementById('uploadLink').value='';
   document.getElementById('uploadSubmitBtn').disabled=true;
 }
@@ -613,10 +618,11 @@ function submitUpload(){
   const name=document.getElementById('uploadName').value.trim();
   const type=document.getElementById('uploadType').value;
   const source=document.getElementById('uploadSource').value.trim();
+  const credit=document.getElementById('uploadCredit').value.trim()||source;
   const link=document.getElementById('uploadLink').value.trim()||'#';
   if(!name||!type||!source)return;
   const newId=Math.max(...archiveData.map(d=>d.id))+1;
-  const entry={id:newId,title:name,source:source,category:type,attribution:source,url:link,image:pendingImg,description:''};
+  const entry={id:newId,title:name,source:source,category:type,attribution:credit,url:link,image:pendingImg,description:''};
   archiveData.push(entry);
   originalOrder.push(newId);
   saveImageMap();
