@@ -239,10 +239,6 @@
     .upload-field{margin-bottom:16px}
     .upload-field label{display:block;font-size:11px;font-style:italic;color:#999;margin-bottom:5px}
     .upload-field select,.upload-field input[type=text]{width:100%;padding:9px 12px;font-size:14px;font-family:'Times New Roman',Times,serif;border:1px solid #000;background:#fff;border-radius:0}
-    .upload-drop{border:1px dashed #ccc;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color 0.15s;margin-bottom:16px;position:relative}
-    .upload-drop:hover,.upload-drop.dragover{border-color:#000}
-    .upload-drop p{font-size:13px;font-style:italic;color:#aaa;pointer-events:none}
-    .upload-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
     .upload-preview{margin-bottom:16px}
     .upload-preview img{max-width:100%;max-height:240px;display:block;border:1px solid #eee}
     .upload-preview p{font-size:12px;font-style:italic;color:#aaa;margin-top:6px}
@@ -356,12 +352,8 @@
   <div class="upload-inner">
     <h2>Upload</h2>
     <p class="upload-desc">Add a new entry to the archive.</p>
-    <div class="upload-drop" id="uploadDropzone">
-      <p>Drop image or click to browse</p>
-      <input type="file" accept="image/*" id="uploadFileInput">
-    </div>
     <div class="upload-field">
-      <label>Or paste image URL</label>
+      <label>Image URL</label>
       <input type="text" id="uploadImgUrl" placeholder="https://...image.jpg">
     </div>
     <div class="upload-preview" id="uploadPreview" style="display:none">
@@ -593,7 +585,6 @@ function prepUpload(){
   pendingImg=null;
   document.getElementById('uploadPreview').style.display='none';
   document.getElementById('uploadPreviewImg').src='';
-  document.getElementById('uploadFileInput').value='';
   document.getElementById('uploadImgUrl').value='';
   document.getElementById('uploadName').value='';
   document.getElementById('uploadType').value='';
@@ -608,23 +599,15 @@ function chkUpload(){
   const hasSrc=!!document.getElementById('uploadSource').value.trim();
   document.getElementById('uploadSubmitBtn').disabled=!(hasImg&&hasName&&hasType&&hasSrc);
 }
-document.getElementById('uploadFileInput').addEventListener('change',function(e){
-  const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=function(ev){pendingImg=ev.target.result;document.getElementById('uploadPreviewImg').src=pendingImg;document.getElementById('uploadPreviewName').textContent=f.name;document.getElementById('uploadPreview').style.display='block';document.getElementById('uploadImgUrl').value='';chkUpload()};r.readAsDataURL(f);
-});
 document.getElementById('uploadImgUrl').addEventListener('input',function(e){
   const u=e.target.value.trim();
-  if(u){pendingImg=u;document.getElementById('uploadPreviewImg').src=u;document.getElementById('uploadPreviewName').textContent='Image URL';document.getElementById('uploadPreview').style.display='block';document.getElementById('uploadFileInput').value=''}
-  else if(!document.getElementById('uploadFileInput').files.length){pendingImg=null;document.getElementById('uploadPreview').style.display='none'}
+  if(u){pendingImg=u;document.getElementById('uploadPreviewImg').src=u;document.getElementById('uploadPreviewName').textContent='Image URL';document.getElementById('uploadPreview').style.display='block'}
+  else{pendingImg=null;document.getElementById('uploadPreview').style.display='none'}
   chkUpload();
 });
 document.getElementById('uploadName').addEventListener('input',chkUpload);
 document.getElementById('uploadType').addEventListener('change',chkUpload);
 document.getElementById('uploadSource').addEventListener('input',chkUpload);
-const dz=document.getElementById('uploadDropzone');
-dz.addEventListener('dragover',function(e){e.preventDefault();this.classList.add('dragover')});
-dz.addEventListener('dragleave',function(){this.classList.remove('dragover')});
-dz.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=function(ev){pendingImg=ev.target.result;document.getElementById('uploadPreviewImg').src=pendingImg;document.getElementById('uploadPreviewName').textContent=f.name;document.getElementById('uploadPreview').style.display='block';chkUpload()};r.readAsDataURL(f)}});
 function submitUpload(){
   if(!pendingImg)return;
   const name=document.getElementById('uploadName').value.trim();
