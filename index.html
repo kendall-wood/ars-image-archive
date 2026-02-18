@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARS Image Archive '26</title>
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Times New Roman',Times,serif;font-weight:400;background:#fff;color:#000}
+
+    /* HEADER — single bar, full-width bottom line */
+    .header{display:flex;justify-content:space-between;align-items:center;padding:0;border-bottom:1px solid #000;background:#c8c8c8}
+    .header-title{padding:10px 24px;white-space:nowrap}
+    .header-title span{font-size:22px;font-weight:400;letter-spacing:-0.01em;color:#000}
+    .header-title .it{font-style:italic}
+
+    /* NAV — bordered cells flush right, full height so lines touch top/bottom */
+    .header-nav{display:flex;flex-shrink:0;align-self:stretch}
+    .header-nav a,.header-nav button{
+      font-size:12px;font-weight:400;color:#000;text-decoration:none;
+      cursor:pointer;border:none;border-left:1px solid #000;
+      font-family:'Times New Roman',Times,serif;
+      padding:0 16px;display:flex;align-items:center;transition:background 0.15s,color 0.15s;
+    }
+    .header-nav a{background:#c8c8c8}
+    .header-nav button{background:#c8c8c8;color:#000}
+    .header-nav a:hover{background:#FF5F00;color:#fff}
+    .header-nav button:hover{background:#FF5F00;color:#fff}
+
+    /* SEARCH + SORT row */
+    .search-row{display:flex;align-items:stretch;border-bottom:1px solid #000}
+    .search-row input{
+      font-size:12px;font-family:'Times New Roman',Times,serif;font-style:italic;
+      color:#000;border:none;
+      padding:7px 16px;width:220px;outline:none;background:#fff;
+    }
+    .search-row input::placeholder{color:#bbb}
+    .search-count{font-size:10px;font-style:italic;color:#999;padding:7px 12px;border-left:1px solid #000;display:flex;align-items:center;white-space:nowrap}
+    .card-source a{color:#000;text-decoration:underline;transition:opacity 0.15s}
+    .card-source a:hover{opacity:0.6}
+
+    /* TOOLBAR — sort left, views right */
+    .toolbar{display:flex;align-items:stretch;gap:0;border-bottom:1px solid #000}
+    .toolbar-spacer{flex:1}
+
+    .tool-cell{
+      font-size:11px;font-weight:400;font-family:'Times New Roman',Times,serif;
+      color:#000;background:#c8c8c8;border:none;border-left:1px solid #000;
+      padding:7px 14px;cursor:pointer;transition:background 0.12s,color 0.12s;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .tool-cell:hover{background:#aaa}
+    .tool-cell[data-sort].active{color:#fff;background:#000}
+    .tool-cell[data-cols].active{background:#FF5F00;color:#fff}
+    .tool-cell[data-cols].active svg rect{fill:#fff}
+    .tool-cell svg{width:14px;height:14px;display:block}
+    .tool-cell svg rect{fill:#666;transition:fill 0.12s}
+    .tool-cell svg line{transition:stroke 0.12s}
+    .tool-cell[data-cols]:hover svg rect{fill:#000}
+    .tool-cell[data-cols]:hover svg line{stroke:#000}
+    .tool-cell[data-cols].active svg line{stroke:#fff}
+    .tool-cell[data-sort].sort-right{border-right:1px solid #000}
+    .tool-divider{width:0;border-left:1px solid #000}
+
+    /* GRID */
+    .archive-grid{display:grid}
+    .archive-grid.cols-1{grid-template-columns:1fr}
+    .archive-grid.cols-2{grid-template-columns:repeat(2,1fr)}
+    .archive-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    .archive-grid.cols-4{grid-template-columns:repeat(4,1fr)}
+
+    .card{border-right:1px solid #000;border-bottom:1px solid #000;display:flex;flex-direction:column;min-height:280px;cursor:pointer;transition:background 0.15s}
+    .card:hover{background:#fafafa}
+    .cols-1 .card{min-height:380px;border-right:none}
+    .cols-2 .card{min-height:320px}
+    .cols-3 .card{min-height:280px}
+    .cols-4 .card{min-height:220px}
+    .cols-1 .card:nth-child(1n){border-right:none}
+    .cols-2 .card{border-right:1px solid #000}.cols-2 .card:nth-child(2n){border-right:none}
+    .cols-3 .card{border-right:1px solid #000}.cols-3 .card:nth-child(3n){border-right:none}
+    .cols-4 .card{border-right:1px solid #000}.cols-4 .card:nth-child(4n){border-right:none}
+
+    .card-top{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 18px 0 18px;gap:10px}
+    .card-info{flex:1}
+    .card-title{font-size:14px;font-weight:400;line-height:1.3;margin-bottom:3px}
+    .card-source{font-size:12px;font-weight:400;font-style:italic;color:#666;line-height:1.3}
+    .card-category{font-size:10px;font-weight:400;font-style:italic;color:#999;white-space:nowrap;flex-shrink:0;padding-top:2px}
+    .sort-title .card-title{color:#FF5F00}
+    .sort-source .card-source a{color:#FF5F00}
+    .sort-category .card-category{color:#FF5F00}
+    .card-image{flex:1;margin:10px 18px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+    .card-image img{width:100%;height:100%;object-fit:contain;position:absolute;top:0;left:0;opacity:0;transition:opacity 0.4s}
+    .card-image img.loaded{opacity:1}
+    .card-image .placeholder{width:100%;height:100%;position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center}
+    .card-image .placeholder-index{font-size:64px;font-weight:300;color:#f0f0f0;letter-spacing:-0.04em}
+    .card-bottom{display:flex;justify-content:space-between;align-items:flex-end;padding:0 18px 14px 18px}
+    .card-attribution{font-size:10px;font-weight:400;color:#666;line-height:1.3}
+    .card-attribution span{display:block;font-size:9px;font-style:italic;color:#aaa;margin-bottom:1px}
+    .card-link{font-size:12px;font-weight:400;font-style:italic;color:#000;text-decoration:underline;transition:opacity 0.15s}
+    .card-link:hover{opacity:0.5}
+
+    /* PANELS (shared) */
+    .full-panel{display:none;position:fixed;inset:0;background:#fff;z-index:1000;overflow-y:auto}
+    .full-panel.active{display:block}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,0.97);z-index:1000;overflow-y:auto;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+    .modal-overlay.active{display:block}
+
+    .panel-bar{display:flex;justify-content:space-between;align-items:center;background:#c8c8c8;border-bottom:1px solid #000;padding:0}
+    .panel-bar-title{padding:10px 24px;font-size:22px;font-weight:400;color:#000;white-space:nowrap}
+    .panel-bar-title .it{font-style:italic}
+    .panel-close{font-size:12px;font-weight:400;color:#000;cursor:pointer;background:#c8c8c8;border:none;border-left:1px solid #000;font-family:'Times New Roman',Times,serif;transition:background 0.15s,color 0.15s;padding:0 16px;display:flex;align-items:center;align-self:stretch}
+    .panel-close:hover{background:#FF5F00;color:#fff}
+
+    .panel-header{display:flex;justify-content:space-between;align-items:flex-start;padding:24px 40px 16px 40px}
+    .panel-title{font-size:24px;font-weight:400;font-style:italic}
+
+    /* TABLE ROWS with vertical lines */
+    .tbl{border-top:none;margin:0 0 80px 0}
+    .tbl-head{display:flex;border-bottom:1px solid #000}
+    .tbl-head span{font-size:10px;font-style:italic;color:#999;padding:8px 12px;border-right:1px solid #000;flex-shrink:0}
+    .tbl-head span:last-child{border-right:none;flex:1}
+    .tbl-row{display:flex;border-bottom:1px solid #000;transition:background 0.1s;cursor:pointer}
+    .tbl-row:hover{background:#fafafa}
+    .tbl-row.no-click{cursor:default}
+    .tbl-row.no-click:hover{background:transparent}
+    .tbl-cell{padding:12px 12px;border-right:1px solid #000;font-size:14px;font-weight:400;overflow:hidden;text-overflow:ellipsis}
+    .tbl-cell:last-child{border-right:none}
+    .tbl-cell.num{width:40px;flex-shrink:0;font-size:11px;color:#999;font-weight:300}
+    .tbl-cell.title{flex:2;min-width:0}
+    .tbl-cell.source{flex:1;min-width:0;font-style:italic;color:#666;font-size:13px}
+    .tbl-cell.cat{width:90px;flex-shrink:0;font-style:italic;color:#FF5F00;font-size:11px}
+    .tbl-cell.cite{flex:1;font-size:13px;line-height:1.5;white-space:normal}
+
+    /* LIST VIEW (inline table with expandable rows) */
+    .archive-grid.cols-list{display:block}
+    .list-head{display:flex;border-bottom:1px solid #000}
+    .list-head .lh{font-size:10px;font-style:italic;color:#999;padding:8px 12px;border-right:1px solid #000;box-sizing:border-box}
+    .list-head .lh:last-child{border-right:none}
+    .list-head .lh-num{width:40px;flex-shrink:0}
+    .list-head .lh-title{flex:2;min-width:0}
+    .list-head .lh-source{flex:1;min-width:0}
+    .list-head .lh-cat{width:90px;flex-shrink:0}
+    .list-row{display:flex;border-bottom:1px solid #000;cursor:pointer;transition:background 0.1s}
+    .list-row:hover{background:#fafafa}
+    .list-cell{padding:12px 12px;border-right:1px solid #000;font-size:14px;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-sizing:border-box}
+    .list-cell:last-child{border-right:none}
+    .list-cell.num{width:40px;flex-shrink:0;font-size:11px;color:#999;font-weight:300}
+    .list-cell.title{flex:2;min-width:0}
+    .list-cell.source{flex:1;min-width:0;font-style:italic;color:#666;font-size:13px}
+    .list-cell.cat{width:90px;flex-shrink:0;font-style:italic;color:#999;font-size:11px}
+    .sort-category .list-cell.cat{color:#FF5F00}
+    .sort-title .list-cell.title{color:#FF5F00}
+    .sort-source .list-cell.source{color:#FF5F00}
+    .list-expand{display:none;border-bottom:1px solid #000;padding:20px 24px;gap:24px;background:#fafafa}
+    .list-expand.open{display:flex}
+    .list-expand-img{width:240px;flex-shrink:0}
+    .list-expand-img img{width:100%;display:block}
+    .list-expand-text{flex:1;min-width:0}
+    .list-expand-text .le-title{font-size:18px;font-weight:400;margin-bottom:6px}
+    .list-expand-text .le-desc{font-size:14px;line-height:1.6;color:#333;margin-bottom:12px}
+    .list-expand-text .le-link{font-size:12px;color:#000;text-decoration:underline}
+
+    /* MODAL NAV ROW */
+    .modal-nav{display:flex;align-items:stretch;border-bottom:1px solid #000;background:#fff}
+    .modal-nav-info{display:flex;align-items:stretch;overflow:hidden;flex-shrink:1;min-width:0}
+    .modal-nav-cell{font-size:12px;font-weight:400;padding:8px 14px;border-right:1px solid #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;flex-shrink:0}
+    .modal-nav-cell.nav-title{flex-shrink:1;min-width:0}
+    .modal-nav-cell.nav-type{font-style:italic;color:#FF5F00}
+    .modal-nav-cell.nav-source{font-style:italic;color:#666}
+    .modal-nav-spacer{flex:1}
+    .modal-nav-right{display:flex;align-items:stretch;flex-shrink:0}
+    .modal-nav-btn{font-size:14px;font-family:'Times New Roman',Times,serif;background:#c8c8c8;border:none;border-left:1px solid #000;padding:0 18px;cursor:pointer;display:flex;align-items:center;transition:background 0.15s,color 0.15s}
+    .modal-nav-btn:hover{background:#FF5F00;color:#fff}
+    .modal-nav-btn svg{width:16px;height:16px}
+    .modal-nav-count{font-size:13px;padding:0 16px;display:flex;align-items:center;border-left:1px solid #000;white-space:nowrap;color:#999}
+
+    /* MODAL DETAIL */
+    .modal-content{max-width:720px;margin:80px auto;padding:0 40px 80px 40px}
+    .modal-category{font-size:12px;font-style:italic;color:#FF5F00;margin-bottom:12px}
+    .modal-title{font-size:32px;font-weight:400;line-height:1.1;letter-spacing:-0.02em;margin-bottom:8px}
+    .modal-source{font-size:15px;font-weight:400;font-style:italic;color:#777;margin-bottom:28px}
+    .modal-image{width:100%;margin-bottom:28px;border:1px solid #eee}
+    .modal-image img{width:100%;display:block}
+    .modal-description{font-size:15px;font-weight:400;line-height:1.7;color:#333;margin-bottom:28px}
+    .modal-link{display:inline-block;font-size:13px;font-style:italic;color:#000;text-decoration:underline;transition:opacity 0.15s}
+    .modal-link:hover{opacity:0.5}
+
+    /* NOTES */
+    .modal-notes{margin-top:36px;border-top:1px solid #000;padding-top:20px}
+    .modal-notes-label{font-size:13px;font-style:italic;color:#999;margin-bottom:12px}
+    .modal-notes-list{margin-bottom:16px}
+    .note-item{border:1px solid #000;margin-bottom:8px}
+    .note-head{display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid #eee;gap:6px}
+    .note-ts{font-size:10px;color:#999;flex:1}
+    .note-ts-orig{font-size:9px;color:#bbb;font-style:italic;margin-left:8px}
+    .note-actions{display:flex;gap:4px;flex-shrink:0}
+    .note-btn{background:none;border:none;cursor:pointer;padding:2px 4px;opacity:0.4;transition:opacity 0.15s;display:flex;align-items:center}
+    .note-btn:hover{opacity:1}
+    .note-btn svg{width:13px;height:13px}
+    .note-text{font-size:14px;line-height:1.5;color:#333;padding:10px 12px}
+    .note-edit-row{display:flex;gap:6px;padding:8px 10px;border-top:1px solid #eee}
+    .note-edit-row input{flex:1;padding:6px 10px;font-size:13px;font-family:'Times New Roman',Times,serif;border:1px solid #000;background:#fff;border-radius:0;outline:none}
+    .note-edit-row button{font-size:11px;font-family:'Times New Roman',Times,serif;padding:6px 12px;cursor:pointer;border:1px solid #000;transition:opacity 0.15s}
+    .note-edit-save{background:#000;color:#fff}
+    .note-edit-cancel{background:#fff;color:#000}
+    .note-edit-row button:hover{opacity:0.7}
+    .modal-notes-empty{font-size:13px;font-style:italic;color:#ccc;margin-bottom:16px}
+    .note-live-box{border:1px solid #000;padding:7px 12px;margin-bottom:8px;display:none}
+    .note-live-box.visible{display:block}
+    .note-live-ts{font-size:10px;color:#999}
+    .note-input-row{display:flex;gap:8px;align-items:stretch}
+    .note-input-row input{flex:1;padding:8px 12px;font-size:13px;font-family:'Times New Roman',Times,serif;border:1px solid #000;background:#fff;border-radius:0;outline:none}
+    .note-input-row input::placeholder{color:#bbb;font-style:italic}
+    .note-input-row button{font-size:12px;font-family:'Times New Roman',Times,serif;color:#fff;background:#FF5F00;border:1px solid #FF5F00;padding:8px 18px;cursor:pointer;transition:opacity 0.15s;white-space:nowrap}
+    .note-input-row button:hover{opacity:0.7}
+
+    /* ABOUT */
+    .about-inner{max-width:900px;padding:80px 40px}
+    .abstract-box{border:1px solid #000;padding:24px 28px;margin-bottom:0}
+    .abstract-box h2{font-size:24px;font-weight:400;font-style:italic;margin-bottom:16px}
+    .abstract-box p{font-size:15px;line-height:1.7;color:#333;margin:0}
+    .hq-notes-label{font-size:13px;font-style:italic;color:#999;margin-top:36px;margin-bottom:8px}
+    .hq-toolbar{display:flex;align-items:stretch;border:1px solid #000;border-bottom:none}
+    .hq-tb-btn{font-size:11px;font-family:'Times New Roman',Times,serif;font-weight:400;color:#000;background:#c8c8c8;border:none;border-right:1px solid #000;padding:6px 14px;cursor:pointer;transition:background 0.12s,color 0.12s;display:flex;align-items:center}
+    .hq-tb-btn:last-child{border-right:none}
+    .hq-tb-btn:hover{background:#aaa}
+    .hq-tb-btn.active{background:#000;color:#fff}
+    .hq-tb-btn .tb-i{font-style:italic}
+    .hq-tb-btn .tb-u{text-decoration:underline}
+    .hq-tb-swatch{width:14px;height:14px;border:1px solid #000;margin:0 2px}
+    .hq-notes{width:100%;min-height:300px;padding:14px 16px;font-size:14px;font-family:'Times New Roman',Times,serif;line-height:1.7;color:#333;border:1px solid #000;background:#fff;border-radius:0;outline:none;overflow-y:auto}
+    .hq-notes:empty::before{content:attr(data-placeholder);color:#bbb;font-style:italic;pointer-events:none}
+    .hq-saved{font-size:10px;font-style:italic;color:#999;margin-top:6px;min-height:14px}
+
+    /* UPLOAD */
+    .upload-inner{max-width:560px;margin:0 auto;padding:80px 40px}
+    .upload-inner h2{font-size:32px;font-weight:400;font-style:italic;margin-bottom:6px}
+    .upload-inner .upload-desc{font-size:14px;font-style:italic;color:#777;margin-bottom:24px}
+    .upload-field{margin-bottom:16px}
+    .upload-field label{display:block;font-size:11px;font-style:italic;color:#999;margin-bottom:5px}
+    .upload-field select,.upload-field input[type=text]{width:100%;padding:9px 12px;font-size:14px;font-family:'Times New Roman',Times,serif;border:1px solid #000;background:#fff;border-radius:0}
+    .upload-drop{border:1px dashed #ccc;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color 0.15s;margin-bottom:16px;position:relative}
+    .upload-drop:hover,.upload-drop.dragover{border-color:#000}
+    .upload-drop p{font-size:13px;font-style:italic;color:#aaa;pointer-events:none}
+    .upload-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .upload-preview{margin-bottom:16px}
+    .upload-preview img{max-width:100%;max-height:240px;display:block;border:1px solid #eee}
+    .upload-preview p{font-size:12px;font-style:italic;color:#aaa;margin-top:6px}
+    .upload-actions{display:flex;gap:10px}
+    .btn-primary{font-size:13px;font-family:'Times New Roman',Times,serif;color:#fff;background:#FF5F00;border:1px solid #FF5F00;padding:9px 24px;cursor:pointer;transition:opacity 0.15s}
+    .btn-primary:hover{opacity:0.7}
+    .btn-primary:disabled{opacity:0.25;cursor:default}
+
+    /* RESPONSIVE */
+    @media(max-width:700px){
+      .header{flex-wrap:wrap}
+      .header-title{padding:10px 16px}
+      .header-title span{font-size:16px}
+      .header-nav a,.header-nav button{padding:0 12px;font-size:12px}
+      .archive-grid{grid-template-columns:1fr!important}
+      .card{border-right:none!important;min-height:280px!important}
+      .tbl{margin:0 20px 60px 20px}
+      .panel-header{padding:24px 20px 16px 20px}
+      .about-inner,.upload-inner{padding:60px 20px}
+      .modal-content{padding:0 20px 60px 20px;margin-top:50px}
+    }
+
+    /* ANIMATION */
+    .card{opacity:0;transform:translateY(6px);animation:fadeIn 0.35s ease forwards}
+    @keyframes fadeIn{to{opacity:1;transform:translateY(0)}}
+    .card:nth-child(1){animation-delay:.02s}.card:nth-child(2){animation-delay:.04s}.card:nth-child(3){animation-delay:.06s}.card:nth-child(4){animation-delay:.08s}.card:nth-child(5){animation-delay:.1s}.card:nth-child(6){animation-delay:.12s}.card:nth-child(7){animation-delay:.14s}.card:nth-child(8){animation-delay:.16s}.card:nth-child(9){animation-delay:.18s}.card:nth-child(10){animation-delay:.2s}.card:nth-child(11){animation-delay:.22s}.card:nth-child(12){animation-delay:.24s}.card:nth-child(13){animation-delay:.26s}.card:nth-child(14){animation-delay:.28s}.card:nth-child(15){animation-delay:.3s}.card:nth-child(16){animation-delay:.32s}.card:nth-child(17){animation-delay:.34s}.card:nth-child(18){animation-delay:.36s}.card:nth-child(19){animation-delay:.38s}.card:nth-child(20){animation-delay:.4s}.card:nth-child(21){animation-delay:.42s}
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-title"><span>ARS Image <span class="it">Archive '26</span></span></div>
+  <nav class="header-nav">
+    <a href="#" onclick="openPanel('aboutPanel');return false">HQ</a>
+    <a href="#" onclick="openPanel('sourcesPanel');return false">Sources</a>
+    <button onclick="openPanel('uploadPanel')">Upload</button>
+  </nav>
+</header>
+
+<!-- SEARCH row -->
+<div class="search-row">
+  <input type="text" id="searchInput" placeholder="Search archive..." oninput="doSearch(this.value)">
+  <div class="search-count" id="searchCount" style="display:none"></div>
+</div>
+
+<!-- TOOLBAR — sort left, view right -->
+<div class="toolbar">
+  <button class="tool-cell" data-sort="default" onclick="sortBy('default')">Default</button>
+  <button class="tool-cell" data-sort="title" onclick="sortBy('title')">Title</button>
+  <button class="tool-cell" data-sort="source" onclick="sortBy('source')">Source</button>
+  <button class="tool-cell sort-right" data-sort="category" onclick="sortBy('category')">Type</button>
+  <div class="toolbar-spacer"></div>
+  <button class="tool-cell" data-cols="list" onclick="setView('list')" title="List view"><svg viewBox="0 0 16 16"><line x1="1" y1="3" x2="15" y2="3" stroke="#666" stroke-width="1.5"/><line x1="1" y1="7" x2="15" y2="7" stroke="#666" stroke-width="1.5"/><line x1="1" y1="11" x2="15" y2="11" stroke="#666" stroke-width="1.5"/><line x1="1" y1="15" x2="15" y2="15" stroke="#666" stroke-width="1.5"/></svg></button>
+  <button class="tool-cell" data-cols="1" onclick="setView(1)" title="1 column"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="1"/></svg></button>
+  <button class="tool-cell" data-cols="2" onclick="setView(2)" title="2 columns"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="14" rx="1"/><rect x="9" y="1" width="6" height="14" rx="1"/></svg></button>
+  <button class="tool-cell active" data-cols="3" onclick="setView(3)" title="3 columns"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="3.5" height="14" rx=".5"/><rect x="6.25" y="1" width="3.5" height="14" rx=".5"/><rect x="11.5" y="1" width="3.5" height="14" rx=".5"/></svg></button>
+  <button class="tool-cell" data-cols="4" onclick="setView(4)" title="4 columns"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="2.5" height="14" rx=".5"/><rect x="5" y="1" width="2.5" height="14" rx=".5"/><rect x="9" y="1" width="2.5" height="14" rx=".5"/><rect x="13" y="1" width="2.5" height="14" rx=".5"/></svg></button>
+</div>
+
+<main class="archive-grid cols-3" id="archiveGrid"></main>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal">
+  <div class="panel-bar">
+    <div class="panel-bar-title">ARS Image <span class="it">Archive '26</span></div>
+    <button class="panel-close" onclick="closePanel('detailModal')">Close</button>
+  </div>
+  <div class="modal-nav" id="modalNav"></div>
+  <div class="modal-content" id="modalContent"></div>
+</div>
+
+<!-- SOURCES -->
+<div class="full-panel" id="sourcesPanel">
+  <div class="panel-bar">
+    <div class="panel-bar-title">ARS Image <span class="it">Archive '26</span> — Sources</div>
+    <button class="panel-close" onclick="closePanel('sourcesPanel')">Close</button>
+  </div>
+  <div class="tbl" id="sourcesTbl" style="margin-top:0"></div>
+</div>
+
+<!-- ABOUT -->
+<div class="full-panel" id="aboutPanel">
+  <div class="panel-bar">
+    <div class="panel-bar-title">ARS Image <span class="it">Archive '26</span> — HQ</div>
+    <button class="panel-close" onclick="closePanel('aboutPanel')">Close</button>
+  </div>
+  <div class="about-inner">
+    <div class="abstract-box">
+      <h2>Abstract:</h2>
+      <p>The research within this project examines the intersection of sociological and psychological impacts on the development, behavior, and well-being of members of the black community residing in lower-income and urban communities. Specifically, how does the impact of generational trauma, household and larger environment stress, nutritional access, and institutional barriers compound and influence daily activity and behavior? The direct biological effects of generational trauma and our emerging understanding of the &ldquo;baggage&rdquo; of DNA has an immediate effect on one&rsquo;s behavior and well-being. Systemic barriers towards proper healthcare, nutritional access, exposure to good habits, and affordability are understood as necessities towards the wellbeing of any human being, yet media cycles have largely disregarded these causes in their commentary on the African-American community. The conversation of personal responsibility against systemic conditions is an ongoing debate amongst the American political climate in relation to the perspective of the urban Black community, but how do systemic conditions inform one&rsquo;s capacity and perspective for personal responsibility? The historical and active demonization of the black community by the American system of white supremacy has always existed in disregard to the conditions African-Americans are placed in by those that demonize them. Notions of racial separation and hierarchy both biologically and socially render humanistic perspectives on the Black community nearly impossible. This paper overcomes these surface level and manipulated distinctions through a compiling and cross-analysis of psychological, sociological, economic, and public health research in attempts to implement a more human and contextual perspective towards the developmental and biological well-being of members of the African-American community. How can we examine individual actions within a broader context when we account truly for the physiological needs of a human and the implications of deficiencies of such? This paper examines how the active effects and historical ramifications of inequality shape a community and individuals while establishing a new framework for social observation.</p>
+    </div>
+    <div class="hq-notes-label">Notes:</div>
+    <div class="hq-toolbar">
+      <button class="hq-tb-btn" onmousedown="event.preventDefault();document.execCommand('italic')" title="Italic"><span class="tb-i">I</span></button>
+      <button class="hq-tb-btn" onmousedown="event.preventDefault();document.execCommand('underline')" title="Underline"><span class="tb-u">U</span></button>
+      <button class="hq-tb-btn" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#FF5F00')" title="Orange"><div class="hq-tb-swatch" style="background:#FF5F00"></div></button>
+      <button class="hq-tb-btn" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#999')" title="Grey"><div class="hq-tb-swatch" style="background:#999"></div></button>
+      <button class="hq-tb-btn" onmousedown="event.preventDefault();document.execCommand('foreColor',false,'#000')" title="Black"><div class="hq-tb-swatch" style="background:#000"></div></button>
+    </div>
+    <div class="hq-notes" id="hqNotes" contenteditable="true" data-placeholder="Write notes here..."></div>
+    <div class="hq-saved" id="hqSaved"></div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div class="full-panel" id="uploadPanel">
+  <div class="panel-bar">
+    <div class="panel-bar-title">ARS Image <span class="it">Archive '26</span> — Upload</div>
+    <button class="panel-close" onclick="closePanel('uploadPanel')">Close</button>
+  </div>
+  <div class="upload-inner">
+    <h2>Upload</h2>
+    <p class="upload-desc">Add a new entry to the archive.</p>
+    <div class="upload-drop" id="uploadDropzone">
+      <p>Drop image or click to browse</p>
+      <input type="file" accept="image/*" id="uploadFileInput">
+    </div>
+    <div class="upload-field">
+      <label>Or paste image URL</label>
+      <input type="text" id="uploadImgUrl" placeholder="https://...image.jpg">
+    </div>
+    <div class="upload-preview" id="uploadPreview" style="display:none">
+      <img id="uploadPreviewImg" src="" alt="Preview">
+      <p id="uploadPreviewName"></p>
+    </div>
+    <div class="upload-field">
+      <label>Name</label>
+      <input type="text" id="uploadName" placeholder="Entry title">
+    </div>
+    <div class="upload-field">
+      <label>Type</label>
+      <select id="uploadType">
+        <option value="">Select type...</option>
+        <option>Article</option>
+        <option>Audio</option>
+        <option>Book</option>
+        <option>PDF</option>
+        <option>Platform</option>
+        <option>Project</option>
+        <option>Research</option>
+        <option>Social</option>
+        <option>TV Series</option>
+        <option>Video</option>
+      </select>
+    </div>
+    <div class="upload-field">
+      <label>Source</label>
+      <input type="text" id="uploadSource" placeholder="Source name">
+    </div>
+    <div class="upload-field">
+      <label>Link</label>
+      <input type="text" id="uploadLink" placeholder="https://...">
+    </div>
+    <div class="upload-actions">
+      <button class="btn-primary" id="uploadSubmitBtn" disabled onclick="submitUpload()">Add to Archive</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const archiveData=[
+  {id:1,title:"How Greenwood Grew a Thriving Black Economy",source:"The New York Times",category:"Article",attribution:"Greenwood Cultural Center / Getty Images",url:"https://www.nytimes.com/2023/05/26/headway/how-greenwood-grew-a-thriving-black-economy.html",image:"images/entry-01.png",description:"A rebuilt Greenwood Avenue in the decades following the Tulsa Massacre showed how the area was able to bounce back. The Greenwood District, often called 'Black Wall Street,' was one of the most prosperous African American communities in the United States before it was destroyed in the 1921 Tulsa Race Massacre."},
+  {id:2,title:"Black Wall Street: A Legacy of Success, Part 1",source:"The Weekly Challenger",category:"Article",attribution:"Jennifer Gamble-Theard, M.Ed.",url:"https://theweeklychallenger.com/black-wall-street-a-legacy-of-success-part-1/",image:"images/entry-02.png",description:"Black-owned businesses began to evolve as African Americans established social and economic institutions designed to achieve control over their lives during post-Reconstruction."},
+  {id:3,title:"Black Wall Street: A Legacy of Success",source:"The Weekly Challenger",category:"Article",attribution:"Jennifer Gamble-Theard, M.Ed.",url:"https://theweeklychallenger.com/black-wall-street-a-legacy-of-success-part-1/",image:"images/entry-03.png",description:"By 1920, the Greenwood District of Tulsa became a dynamic center of progress with 108 business establishments, including two black newspapers, 41 grocery and meat markets, 30 cafés and restaurants."},
+  {id:4,title:"Polo Ralph Lauren for Oak Bluffs Collection",source:"Fashion Dive",category:"Article",attribution:"Ralph Lauren Corporation",url:"https://www.fashiondive.com/news/polo-ralph-lauren-oak-bluffs-launch/753952/",image:"images/entry-04.png",description:"The Polo Ralph Lauren for Oak Bluffs collection celebrates the historically Black community on Martha's Vineyard, created in partnership with Morehouse and Spelman Colleges."},
+  {id:5,title:"Abbott Elementary",source:"IMDB",category:"TV Series",attribution:"Created by Quinta Brunson",url:"https://www.imdb.com/title/tt14218830/",image:"images/entry-05.png",description:"A workplace comedy following dedicated teachers at a Philadelphia public school. Won 4 Primetime Emmys."},
+  {id:6,title:"White Burgers, Black Cash: The History of Racializing Fast Food",source:"KCRW Good Food",category:"Audio",attribution:"Naa Oyo Kwate",url:"https://www.kcrw.com/shows/good-food/stories/white-burgers-black-cash-naa-oyo-kwate",image:"images/entry-06.png",description:"An exploration of the history of racializing fast food as Black, examining food systems, racial capitalism, and urban communities."},
+  {id:7,title:"The Black Panthers and the Breakfast for Children Program",source:"Community Food Initiatives",category:"Article",attribution:"Jess Markowitz",url:"https://communityfoodinitiatives.org/news-events/blog.html/article/2018/02/23/the-black-panthers-and-the-breakfast-for-children-program",image:"images/entry-07.png",description:"By the end of 1969, The Panthers were serving free breakfast to 20,000 school-aged children in 19 cities. The program was eventually targeted and dismantled by the FBI."},
+  {id:8,title:"Maslow's Hierarchy of Needs",source:"DBM Team",category:"Article",attribution:"DBM Team",url:"https://dbmteam.com/insights/maslows-hierarchy-of-needs-human-motivations/",image:"images/entry-08.png",description:"Abraham Maslow's five interrelated categories of motivation, from physiological needs to self-actualization."},
+  {id:9,title:"Marine Drive Redevelopment",source:"UDA / Buffalo Housing Authority",category:"Project",attribution:"Engage the Team / BMHA",url:"https://www.engagetheteam.com/marinedrive",image:"images/entry-09.png",description:"A community-driven redevelopment project for the Marine Drive site in Buffalo emphasizing affordable rents and community voice."},
+  {id:10,title:"A City Divided: A Brief History of Segregation in Buffalo",source:"Partnership for the Public Good",category:"PDF",attribution:"PPG Buffalo",url:"https://ppgbuffalo.org/files/documents/data-demographics-history/a_city_divided__a_brief_history_of_segregation_in_the_city_of_buffalo.pdf",image:"images/entry-10.png",description:"A historical report examining patterns and policies of racial segregation in Buffalo, New York."},
+  {id:11,title:"Women, Race & Class",source:"Angela Davis",category:"Book",attribution:"Angela Davis, 1981",url:"https://legalform.blog/wp-content/uploads/2017/08/davis-women-race-class.pdf",image:"images/entry-11.png",description:"Angela Davis's landmark work examining the interplay of race, gender, and class in American history."},
+  {id:12,title:"Inside Mississippi's Rural Hoods",source:"YouTube — RocaNews",category:"Video",attribution:"RocaNews",url:"https://www.youtube.com/watch?v=7Z9nKfc7TFY",image:"images/entry-12.png",description:"A documentary exploration of rural communities in Mississippi and their economic conditions."},
+  {id:13,title:"The Zeus Network",source:"Zeus",category:"Platform",attribution:"The Zeus Network",url:"https://www.thezeusnetwork.com/",image:"images/entry-13.png",description:"A streaming platform offering original content from independent creators, representing Black-owned digital media."},
+  {id:14,title:"Blood Lead Levels Show Enduring Legacy of Structural Racism",source:"University of Notre Dame",category:"Research",attribution:"Marie Lynn Miranda / CEHI",url:"https://research.nd.edu/news-and-events/news/blood-lead-levels-show-enduring-legacy-of-structural-racism/",image:"images/entry-14.png",description:"Research finding blood lead levels are higher in children living in racially segregated neighborhoods."},
+  {id:15,title:"Health Effects of Lead Poisoning",source:"City of Biddeford, Maine",category:"Article",attribution:"City of Biddeford",url:"https://www.biddefordmaine.org/2954/Health-Effects-of-Lead-Poisoning",image:"images/entry-15.png",description:"An overview of lead poisoning's health effects, particularly its impact on children's brain development."},
+  {id:16,title:"High Black Imprisonment Risk Tied to Educational Opportunity",source:"Illinois Policy",category:"Article",attribution:"Illinois Policy Institute",url:"https://www.illinoispolicy.org/high-black-imprisonment-risk-tied-to-educational-opportunity/",image:"images/entry-16.png",description:"Nearly 7 in 10 Black male dropouts born 1975–1979 have been imprisoned. Blacks make up less than 15% of Illinois' population but nearly 60% of its prison population."},
+  {id:17,title:"Illinois Literacy Foundation",source:"LinkedIn — Heather Anichini",category:"Social",attribution:"Heather Anichini",url:"https://www.linkedin.com/posts/heatheranichini_in-my-work-with-the-illinois-literacy-foundation-activity-7405335806657282048-vgOE",image:"images/entry-17.png",description:"A post on the intersection of literacy, educational equity, and systemic barriers in Illinois."},
+  {id:18,title:"The 1619 Project: A New Origin Story",source:"The New York Times Store",category:"Book",attribution:"Nikole Hannah-Jones",url:"https://store.nytimes.com/products/the-1619-project-a-new-origin-story?variant=39381787902022",image:"images/entry-18.png",description:"Reframes American history by placing slavery's consequences and Black Americans' contributions at the center of the national narrative."},
+  {id:19,title:"Black-ish",source:"IMDB",category:"TV Series",attribution:"Created by Kenya Barris",url:"https://www.imdb.com/title/tt3487356/",image:"images/entry-19.png",description:"A family man struggles to gain cultural identity while raising kids in a predominantly white, upper-middle-class neighborhood. 2014–2022."},
+  {id:20,title:"Atlanta",source:"IMDB",category:"TV Series",attribution:"Created by Donald Glover",url:"https://www.imdb.com/title/tt4288182/",image:"images/entry-20.png",description:"Earn and his cousin Alfred navigate Atlanta's rap scene, confronting race, poverty, status, and parenthood. Won 7 Primetime Emmys. 2016–2022."},
+  {id:21,title:"Lil Durk and King Von Takeover Chicago Remastered",source:"YouTube — CaseyTooReal",category:"Video",attribution:"CaseyTooReal",url:"https://www.youtube.com/watch?v=9OqQm8TV33o",image:"images/entry-21.png",description:"A Roblox recreation of Chicago neighborhoods associated with drill music culture."}
+];
+
+const originalOrder=archiveData.map(d=>d.id);
+let currentCols=3;
+let currentSort='default';
+
+function updateGridClass(){
+  const sortClass=currentSort!=='default'?'sort-'+currentSort:'';
+  document.getElementById('archiveGrid').className='archive-grid cols-'+currentCols+(sortClass?' '+sortClass:'');
+}
+
+function setView(n){
+  currentCols=n;
+  updateGridClass();
+  document.querySelectorAll('.tool-cell[data-cols]').forEach(b=>{
+    const match=n==='list'?b.dataset.cols==='list':+b.dataset.cols===n;
+    b.classList.toggle('active',match);
+  });
+  if(searchTerm){const filtered=archiveData.filter(d=>d.title.toLowerCase().includes(searchTerm)||d.source.toLowerCase().includes(searchTerm)||d.category.toLowerCase().includes(searchTerm)||d.attribution.toLowerCase().includes(searchTerm)||d.description.toLowerCase().includes(searchTerm));renderFiltered(filtered)}
+  else renderGrid();
+}
+
+function sortBy(key){
+  currentSort=key;
+  updateGridClass();
+  document.querySelectorAll('.tool-cell[data-sort]').forEach(b=>b.classList.toggle('active',b.dataset.sort===key));
+  if(key==='default') archiveData.sort((a,b)=>originalOrder.indexOf(a.id)-originalOrder.indexOf(b.id));
+  else if(key==='title') archiveData.sort((a,b)=>a.title.localeCompare(b.title));
+  else if(key==='source') archiveData.sort((a,b)=>a.source.localeCompare(b.source));
+  else if(key==='category') archiveData.sort((a,b)=>a.category.localeCompare(b.category));
+  renderGrid();
+}
+
+function renderGrid(){renderItems(archiveData)}
+function renderItems(list){
+  const g=document.getElementById('archiveGrid');
+  if(currentCols==='list'){
+    g.innerHTML=`<div class="list-head"><div class="lh lh-num">#</div><div class="lh lh-title">Title</div><div class="lh lh-source">Source</div><div class="lh lh-cat">Type</div></div>`+
+    list.map((d,i)=>`<div class="list-row" onclick="toggleListExpand(this,${d.id})">
+      <div class="list-cell num">${String(i+1).padStart(2,'0')}</div>
+      <div class="list-cell title">${d.title}</div>
+      <div class="list-cell source">${d.source}</div>
+      <div class="list-cell cat">${d.category}</div>
+    </div>
+    <div class="list-expand" id="le-${d.id}">
+      ${d.image?`<div class="list-expand-img" onclick="event.stopPropagation();openDetail(${d.id})" style="cursor:pointer"><img src="${d.image}" alt="${d.title}"></div>`:''}
+      <div class="list-expand-text">
+        <div class="le-title">${d.title}</div>
+        <div class="le-desc">${d.description}</div>
+        <a class="le-link" href="${d.url}" target="_blank" rel="noopener">View Source</a>
+      </div>
+    </div>`).join('');
+    return;
+  }
+  g.innerHTML=list.map((d,i)=>`
+    <div class="card" onclick="openDetail(${d.id})">
+      <div class="card-top"><div class="card-info"><div class="card-title">${d.title}</div><div class="card-source"><a href="${d.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${d.source}</a></div></div><div class="card-category">${d.category}</div></div>
+      <div class="card-image"><div class="placeholder"><span class="placeholder-index">${String(i+1).padStart(2,'0')}</span></div>${d.image?`<img src="${d.image}" alt="${d.title}" onload="this.classList.add('loaded')" onerror="this.style.display='none'">`:''}
+      </div>
+      <div class="card-bottom"><div class="card-attribution"><span>Source</span>${d.attribution}</div><a class="card-link" href="${d.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Details</a></div>
+    </div>`).join('');
+  setTimeout(()=>{g.querySelectorAll('.card-image img').forEach(img=>{if(img.complete&&img.naturalWidth)img.classList.add('loaded')})},50);
+}
+function toggleListExpand(row,id){
+  const el=document.getElementById('le-'+id);
+  if(!el)return;
+  const wasOpen=el.classList.contains('open');
+  document.querySelectorAll('.list-expand.open').forEach(e=>e.classList.remove('open'));
+  if(!wasOpen)el.classList.add('open');
+}
+
+let currentDetailIdx=0;
+let displayedList=[];
+function getDisplayedList(){
+  if(searchTerm){
+    return archiveData.filter(d=>
+      d.title.toLowerCase().includes(searchTerm)||d.source.toLowerCase().includes(searchTerm)||
+      d.category.toLowerCase().includes(searchTerm)||d.attribution.toLowerCase().includes(searchTerm)||
+      d.description.toLowerCase().includes(searchTerm));
+  }
+  return archiveData;
+}
+function openDetail(id){
+  displayedList=getDisplayedList();
+  const idx=displayedList.findIndex(x=>x.id===id);
+  if(idx<0)return;
+  currentDetailIdx=idx;
+  showDetail();
+}
+function navDetail(dir){
+  currentDetailIdx+=dir;
+  if(currentDetailIdx<0)currentDetailIdx=displayedList.length-1;
+  if(currentDetailIdx>=displayedList.length)currentDetailIdx=0;
+  showDetail();
+}
+const arrowLeftSvg='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L4 8l6 6"/></svg>';
+const arrowRightSvg='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2l6 6-6 6"/></svg>';
+function showDetail(){
+  const d=displayedList[currentDetailIdx];if(!d)return;
+  const total=displayedList.length;
+  const pos=currentDetailIdx+1;
+  document.getElementById('modalNav').innerHTML=`
+    <div class="modal-nav-info">
+      <div class="modal-nav-cell nav-title">${d.title}</div>
+      <div class="modal-nav-cell nav-type">${d.category}</div>
+      <div class="modal-nav-cell nav-source">${d.source}</div>
+    </div>
+    <div class="modal-nav-spacer"></div>
+    <div class="modal-nav-right">
+      <button class="modal-nav-btn" onclick="navDetail(-1)" title="Previous">${arrowLeftSvg}</button>
+      <div class="modal-nav-count">${pos}/${total}</div>
+      <button class="modal-nav-btn" onclick="navDetail(1)" title="Next">${arrowRightSvg}</button>
+    </div>`;
+  document.getElementById('modalContent').innerHTML=`
+    <div class="modal-category">${d.category}</div>
+    <h2 class="modal-title">${d.title}</h2>
+    <div class="modal-source">${d.source} — ${d.attribution}</div>
+    ${d.image?`<div class="modal-image"><img src="${d.image}" alt="${d.title}"></div>`:''}
+    <a class="modal-link" href="${d.url}" target="_blank" rel="noopener">View Original Source &#8599;</a>
+    <div class="modal-notes">
+      <div class="modal-notes-label">Notes:</div>
+      <div id="notesList-${d.id}"></div>
+      <div class="note-live-box" id="noteLiveBox-${d.id}"><span class="note-live-ts" id="noteLiveTs-${d.id}"></span></div>
+      <div class="note-input-row">
+        <input type="text" id="noteInput-${d.id}" placeholder="Add a note..." onkeydown="if(event.key==='Enter')addNote(${d.id})" onfocus="startNoteClock(${d.id})" oninput="startNoteClock(${d.id})">
+        <button onclick="addNote(${d.id})">Add</button>
+      </div>
+    </div>`;
+  renderNotesList(d.id);
+  const m=document.getElementById('detailModal');
+  if(!m.classList.contains('active')){m.classList.add('active');document.body.style.overflow='hidden'}
+  m.scrollTop=0;
+}
+
+function openPanel(id){
+  if(id==='sourcesPanel')buildSources();
+  if(id==='uploadPanel')prepUpload();
+  document.getElementById(id).classList.add('active');document.body.style.overflow='hidden';
+}
+function closePanel(id){document.getElementById(id).classList.remove('active');document.body.style.overflow=''}
+
+function chicagoCite(d){
+  const domain=new URL(d.url).hostname.replace('www.','');
+  if(d.category==='Book') return `${d.attribution}. <i>${d.title}</i>. Accessed 2026. ${d.url}`;
+  if(d.category==='TV Series') return `${d.attribution}. "${d.title}." ${d.source}. Accessed 2026. ${d.url}`;
+  if(d.category==='Video') return `${d.attribution}. "${d.title}." Video. ${d.source}. Accessed 2026. ${d.url}`;
+  if(d.category==='Audio') return `${d.attribution}. "${d.title}." Audio. ${d.source}. Accessed 2026. ${d.url}`;
+  if(d.category==='PDF') return `${d.attribution}. "${d.title}." ${d.source}. Accessed 2026. ${d.url}`;
+  return `${d.attribution}. "${d.title}." <i>${d.source}</i>. Accessed 2026. ${d.url}`;
+}
+
+function buildSources(){
+  let h='<div class="tbl-head"><span style="width:40px">#</span><span style="flex:1">Citation (Chicago)</span><span style="width:90px">Type</span></div>';
+  const sorted=[...archiveData].sort((a,b)=>a.attribution.localeCompare(b.attribution));
+  h+=sorted.map((d,i)=>`<div class="tbl-row no-click">
+    <div class="tbl-cell num">${String(i+1).padStart(2,'0')}</div>
+    <div class="tbl-cell cite">${chicagoCite(d)}</div>
+    <div class="tbl-cell cat">${d.category}</div>
+  </div>`).join('');
+  document.getElementById('sourcesTbl').innerHTML=h;
+}
+
+// UPLOAD
+let pendingImg=null;
+function prepUpload(){
+  pendingImg=null;
+  document.getElementById('uploadPreview').style.display='none';
+  document.getElementById('uploadPreviewImg').src='';
+  document.getElementById('uploadFileInput').value='';
+  document.getElementById('uploadImgUrl').value='';
+  document.getElementById('uploadName').value='';
+  document.getElementById('uploadType').value='';
+  document.getElementById('uploadSource').value='';
+  document.getElementById('uploadLink').value='';
+  document.getElementById('uploadSubmitBtn').disabled=true;
+}
+function chkUpload(){
+  const hasImg=!!pendingImg;
+  const hasName=!!document.getElementById('uploadName').value.trim();
+  const hasType=!!document.getElementById('uploadType').value;
+  const hasSrc=!!document.getElementById('uploadSource').value.trim();
+  document.getElementById('uploadSubmitBtn').disabled=!(hasImg&&hasName&&hasType&&hasSrc);
+}
+document.getElementById('uploadFileInput').addEventListener('change',function(e){
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=function(ev){pendingImg=ev.target.result;document.getElementById('uploadPreviewImg').src=pendingImg;document.getElementById('uploadPreviewName').textContent=f.name;document.getElementById('uploadPreview').style.display='block';document.getElementById('uploadImgUrl').value='';chkUpload()};r.readAsDataURL(f);
+});
+document.getElementById('uploadImgUrl').addEventListener('input',function(e){
+  const u=e.target.value.trim();
+  if(u){pendingImg=u;document.getElementById('uploadPreviewImg').src=u;document.getElementById('uploadPreviewName').textContent='Image URL';document.getElementById('uploadPreview').style.display='block';document.getElementById('uploadFileInput').value=''}
+  else if(!document.getElementById('uploadFileInput').files.length){pendingImg=null;document.getElementById('uploadPreview').style.display='none'}
+  chkUpload();
+});
+document.getElementById('uploadName').addEventListener('input',chkUpload);
+document.getElementById('uploadType').addEventListener('change',chkUpload);
+document.getElementById('uploadSource').addEventListener('input',chkUpload);
+const dz=document.getElementById('uploadDropzone');
+dz.addEventListener('dragover',function(e){e.preventDefault();this.classList.add('dragover')});
+dz.addEventListener('dragleave',function(){this.classList.remove('dragover')});
+dz.addEventListener('drop',function(e){e.preventDefault();this.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=function(ev){pendingImg=ev.target.result;document.getElementById('uploadPreviewImg').src=pendingImg;document.getElementById('uploadPreviewName').textContent=f.name;document.getElementById('uploadPreview').style.display='block';chkUpload()};r.readAsDataURL(f)}});
+function submitUpload(){
+  if(!pendingImg)return;
+  const name=document.getElementById('uploadName').value.trim();
+  const type=document.getElementById('uploadType').value;
+  const source=document.getElementById('uploadSource').value.trim();
+  const link=document.getElementById('uploadLink').value.trim()||'#';
+  if(!name||!type||!source)return;
+  const newId=Math.max(...archiveData.map(d=>d.id))+1;
+  const entry={id:newId,title:name,source:source,category:type,attribution:source,url:link,image:pendingImg,description:''};
+  archiveData.push(entry);
+  originalOrder.push(newId);
+  saveImageMap();
+  renderGrid();
+  closePanel('uploadPanel');
+}
+
+function loadSavedImages(){try{const s=localStorage.getItem('arsArchiveImages');if(s){const m=JSON.parse(s);archiveData.forEach(d=>{if(m[d.id])d.image=m[d.id]})}}catch(e){}}
+function saveImageMap(){const m={};archiveData.forEach(d=>{if(d.image)m[d.id]=d.image});localStorage.setItem('arsArchiveImages',JSON.stringify(m))}
+
+function loadNotes(){try{const s=localStorage.getItem('arsArchiveNotes');return s?JSON.parse(s):{}}catch(e){return{}}}
+function saveNotes(all){localStorage.setItem('arsArchiveNotes',JSON.stringify(all))}
+let noteClockInterval=null;
+let activeNoteEntryId=null;
+function fmtNow(){const now=new Date();return now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit'})}
+function fmtTs(){const now=new Date();return now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}
+function startNoteClock(id){
+  if(noteClockInterval)clearInterval(noteClockInterval);
+  activeNoteEntryId=id;
+  const box=document.getElementById('noteLiveBox-'+id);
+  const el=document.getElementById('noteLiveTs-'+id);
+  if(!el||!box)return;
+  box.classList.add('visible');
+  el.textContent=fmtNow();
+  noteClockInterval=setInterval(()=>{el.textContent=fmtNow()},1000);
+}
+function stopNoteClock(id){
+  if(noteClockInterval){clearInterval(noteClockInterval);noteClockInterval=null}
+  const box=document.getElementById('noteLiveBox-'+id);if(box)box.classList.remove('visible');
+  const el=document.getElementById('noteLiveTs-'+id);if(el)el.textContent='';
+  activeNoteEntryId=null;
+}
+const pencilSvg='<svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3"><path d="M11.5 1.5l3 3L5 14H2v-3z"/><path d="M9.5 3.5l3 3"/></svg>';
+const trashSvg='<svg viewBox="0 0 16 16" fill="none" stroke="#000" stroke-width="1.3"><path d="M3 4h10M6 4V2.5h4V4M4.5 4v9.5h7V4M7 7v4M9 7v4"/></svg>';
+function addNote(id){
+  const inp=document.getElementById('noteInput-'+id);if(!inp)return;
+  const text=inp.value.trim();if(!text)return;
+  const all=loadNotes();
+  if(!all[id])all[id]=[];
+  all[id].push({text:text,ts:fmtTs()});
+  saveNotes(all);
+  inp.value='';
+  stopNoteClock(id);
+  renderNotesList(id);
+}
+function deleteNote(entryId,idx){
+  const all=loadNotes();
+  if(!all[entryId])return;
+  all[entryId].splice(idx,1);
+  if(!all[entryId].length)delete all[entryId];
+  saveNotes(all);
+  renderNotesList(entryId);
+}
+function editNote(entryId,idx){
+  const all=loadNotes();
+  const note=all[entryId]&&all[entryId][idx];if(!note)return;
+  const item=document.getElementById('note-'+entryId+'-'+idx);if(!item)return;
+  const textEl=item.querySelector('.note-text');
+  const existing=item.querySelector('.note-edit-row');
+  if(existing){existing.remove();textEl.style.display='';return}
+  textEl.style.display='none';
+  const row=document.createElement('div');
+  row.className='note-edit-row';
+  row.innerHTML=`<input type="text" id="noteEdit-${entryId}-${idx}" value="${note.text.replace(/"/g,'&quot;')}"><button class="note-edit-save" onclick="saveEdit(${entryId},${idx})">Save</button><button class="note-edit-cancel" onclick="cancelEdit(${entryId},${idx})">Cancel</button>`;
+  item.appendChild(row);
+  const inp=document.getElementById('noteEdit-'+entryId+'-'+idx);
+  inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')saveEdit(entryId,idx);if(e.key==='Escape')cancelEdit(entryId,idx)});
+}
+function saveEdit(entryId,idx){
+  const inp=document.getElementById('noteEdit-'+entryId+'-'+idx);if(!inp)return;
+  const text=inp.value.trim();if(!text)return;
+  const all=loadNotes();
+  const note=all[entryId]&&all[entryId][idx];if(!note)return;
+  if(!note.originalTs)note.originalTs=note.ts;
+  note.text=text;
+  note.ts=fmtTs();
+  note.edited=true;
+  saveNotes(all);
+  renderNotesList(entryId);
+}
+function cancelEdit(entryId,idx){
+  const item=document.getElementById('note-'+entryId+'-'+idx);if(!item)return;
+  const row=item.querySelector('.note-edit-row');if(row)row.remove();
+  const textEl=item.querySelector('.note-text');if(textEl)textEl.style.display='';
+}
+function renderNotesList(id){
+  const el=document.getElementById('notesList-'+id);if(!el)return;
+  const all=loadNotes();
+  const notes=all[id]||[];
+  if(!notes.length){el.innerHTML='<div class="modal-notes-empty">No notes yet.</div>';return}
+  el.innerHTML=notes.map((n,i)=>`<div class="note-item" id="note-${id}-${i}">
+    <div class="note-head">
+      <span class="note-ts">${n.ts}${n.edited&&n.originalTs?'<span class="note-ts-orig">Original: '+n.originalTs+'</span>':''}</span>
+      <span class="note-actions">
+        <button class="note-btn" onclick="editNote(${id},${i})" title="Edit">${pencilSvg}</button>
+        <button class="note-btn" onclick="deleteNote(${id},${i})" title="Delete">${trashSvg}</button>
+      </span>
+    </div>
+    <div class="note-text">${n.text}</div>
+  </div>`).join('');
+}
+
+// SEARCH
+let searchTerm='';
+function doSearch(q){
+  searchTerm=q.trim().toLowerCase();
+  const ct=document.getElementById('searchCount');
+  if(!searchTerm){ct.style.display='none';renderGrid();return}
+  const filtered=archiveData.filter(d=>
+    d.title.toLowerCase().includes(searchTerm)||
+    d.source.toLowerCase().includes(searchTerm)||
+    d.category.toLowerCase().includes(searchTerm)||
+    d.attribution.toLowerCase().includes(searchTerm)||
+    d.description.toLowerCase().includes(searchTerm)
+  );
+  ct.style.display='flex';
+  ct.textContent=filtered.length+' result'+(filtered.length!==1?'s':'');
+  renderFiltered(filtered);
+}
+function renderFiltered(list){renderItems(list)}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')['detailModal','sourcesPanel','aboutPanel','uploadPanel'].forEach(closePanel);
+  if(document.getElementById('detailModal').classList.contains('active')&&!e.target.matches('input,textarea')){
+    if(e.key==='ArrowLeft')navDetail(-1);
+    if(e.key==='ArrowRight')navDetail(1);
+  }
+});
+
+// HQ NOTES
+let hqSaveTimer=null;
+const hqNotes=document.getElementById('hqNotes');
+const hqSaved=document.getElementById('hqSaved');
+hqNotes.innerHTML=localStorage.getItem('arsHqNotes')||'';
+hqNotes.addEventListener('input',function(){
+  if(hqSaveTimer)clearTimeout(hqSaveTimer);
+  hqSaved.textContent='';
+  hqSaveTimer=setTimeout(()=>{
+    localStorage.setItem('arsHqNotes',hqNotes.innerHTML);
+    const now=new Date();
+    hqSaved.textContent='Saved '+now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  },600);
+});
+
+loadSavedImages();renderGrid();
+</script>
+</body>
+</html>
