@@ -50,7 +50,7 @@
       display:flex;align-items:center;justify-content:center;
     }
     .tool-cell:hover{background:#aaa}
-    .tool-cell[data-sort].active{color:#fff;background:#000}
+    .tool-cell[data-sort].active{color:#fff;background:#FF5F00}
     .tool-cell[data-cols].active{background:#FF5F00;color:#fff}
     .tool-cell[data-cols].active svg rect{fill:#fff}
     .tool-cell svg{width:14px;height:14px;display:block}
@@ -267,13 +267,41 @@
     /* ANIMATION */
     .card{opacity:0;transform:translateY(6px);animation:fadeIn 0.35s ease forwards}
     @keyframes fadeIn{to{opacity:1;transform:translateY(0)}}
+    /* SORT COUNT */
+    .sort-count{font-size:10px;color:#999;margin-left:3px;font-style:normal}
+    .tool-cell[data-sort].active .sort-count{color:rgba(255,255,255,0.7)}
+
+    /* CONNECTIONS */
+    .modal-connections{margin-top:16px}
+    .connection-item{font-size:14px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .connection-label{color:#666;font-style:italic;font-size:13px}
+    .connection-link{color:#FF5F00;text-decoration:underline;cursor:pointer;font-style:italic;transition:opacity 0.15s}
+    .connection-link:hover{opacity:0.7}
+    .connection-remove{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;line-height:1;padding:0 2px;transition:color 0.15s}
+    .connection-remove:hover{color:#FF5F00}
+    .connection-add{position:relative;display:inline-block;margin-top:4px}
+    .connection-btn{font-size:12px;font-family:'Times New Roman',Times,serif;color:#FF5F00;background:none;border:1px solid #FF5F00;padding:4px 12px;cursor:pointer;transition:background 0.15s,color 0.15s}
+    .connection-btn:hover{background:#FF5F00;color:#fff}
+    .connection-dropdown{display:none;position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid #000;max-height:240px;overflow-y:auto;z-index:10;min-width:300px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+    .connection-dropdown.open{display:block}
+    .connection-dd-item{padding:8px 12px;font-size:13px;font-family:'Times New Roman',Times,serif;cursor:pointer;border-bottom:1px solid #eee;transition:background 0.1s,color 0.1s;display:flex;justify-content:space-between;align-items:center}
+    .connection-dd-item:hover{background:#FF5F00;color:#fff}
+    .connection-dd-item:last-child{border-bottom:none}
+    .connection-dd-type{font-size:11px;font-style:italic;opacity:0.5}
+
+    /* CHICAGO CITATION */
+    .cite-wrap{padding-left:2em;text-indent:-2em;line-height:1.6}
+    .cite-name{color:#000;text-decoration:none;cursor:pointer;transition:color 0.15s}
+    .cite-name:hover{color:#FF5F00}
+    .cite-url{color:#999;font-size:12px;word-break:break-all}
+
     .card:nth-child(1){animation-delay:.02s}.card:nth-child(2){animation-delay:.04s}.card:nth-child(3){animation-delay:.06s}.card:nth-child(4){animation-delay:.08s}.card:nth-child(5){animation-delay:.1s}.card:nth-child(6){animation-delay:.12s}.card:nth-child(7){animation-delay:.14s}.card:nth-child(8){animation-delay:.16s}.card:nth-child(9){animation-delay:.18s}.card:nth-child(10){animation-delay:.2s}.card:nth-child(11){animation-delay:.22s}.card:nth-child(12){animation-delay:.24s}.card:nth-child(13){animation-delay:.26s}.card:nth-child(14){animation-delay:.28s}.card:nth-child(15){animation-delay:.3s}.card:nth-child(16){animation-delay:.32s}.card:nth-child(17){animation-delay:.34s}.card:nth-child(18){animation-delay:.36s}.card:nth-child(19){animation-delay:.38s}.card:nth-child(20){animation-delay:.4s}.card:nth-child(21){animation-delay:.42s}
   </style>
 </head>
 <body>
 
 <header class="header">
-  <div class="header-title" onclick="goHome()" style="cursor:pointer"><span>ARS Image <span class="it">Archive '26</span></span></div>
+  <div class="header-title" onclick="goHome()" style="cursor:pointer;"><span>ARS Image <span class="it">Archive '26</span></span></div>
   <nav class="header-nav">
     <a href="#" onclick="openPanel('aboutPanel');return false">HQ</a>
     <a href="#" onclick="openPanel('sourcesPanel');return false">Sources</a>
@@ -292,7 +320,7 @@
   <button class="tool-cell" data-sort="default" onclick="sortBy('default')">Default</button>
   <button class="tool-cell" data-sort="title" onclick="sortBy('title')">Title</button>
   <button class="tool-cell" data-sort="source" onclick="sortBy('source')">Source</button>
-  <button class="tool-cell sort-right" data-sort="category" onclick="sortBy('category')">Type</button>
+  <button class="tool-cell sort-right" data-sort="category" onclick="sortBy('category')">Type <span class="sort-count" id="typeSortCount"></span></button>
   <div class="toolbar-spacer"></div>
   <button class="tool-cell" data-cols="list" onclick="setView('list')" title="List view"><svg viewBox="0 0 16 16"><line x1="1" y1="3" x2="15" y2="3" stroke="#666" stroke-width="1.5"/><line x1="1" y1="7" x2="15" y2="7" stroke="#666" stroke-width="1.5"/><line x1="1" y1="11" x2="15" y2="11" stroke="#666" stroke-width="1.5"/><line x1="1" y1="15" x2="15" y2="15" stroke="#666" stroke-width="1.5"/></svg></button>
   <button class="tool-cell" data-cols="1" onclick="setView(1)" title="1 column"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="1"/></svg></button>
@@ -459,6 +487,7 @@ function sortBy(key){
 
 function renderGrid(){renderItems(archiveData)}
 function renderItems(list){
+  const countEl=document.getElementById('typeSortCount');if(countEl)countEl.textContent=list.length;
   const g=document.getElementById('archiveGrid');
   if(currentCols==='list'){
     g.innerHTML=`<div class="list-head"><div class="lh lh-num">#</div><div class="lh lh-title">Title</div><div class="lh lh-source">Source</div><div class="lh lh-cat">Type</div></div>`+
@@ -543,6 +572,7 @@ function showDetail(){
     <div class="modal-source">${d.source} — ${d.attribution}</div>
     ${d.image?`<div class="modal-image"><img src="${d.image}" alt="${d.title}"></div>`:''}
     <a class="modal-link" href="${d.url}" target="_blank" rel="noopener">View Original Source &#8599;</a>
+    <div class="modal-connections" id="connections-${d.id}"></div>
     <div class="modal-notes">
       <div class="modal-notes-label">Notes:</div>
       <div id="notesList-${d.id}"></div>
@@ -553,6 +583,7 @@ function showDetail(){
       </div>
     </div>`;
   renderNotesList(d.id);
+  renderConnectionsUI(d.id);
   const m=document.getElementById('detailModal');
   if(!m.classList.contains('active')){m.classList.add('active');document.body.style.overflow='hidden'}
   m.scrollTop=0;
@@ -567,17 +598,18 @@ function closePanel(id){document.getElementById(id).classList.remove('active');d
 function goHome(){['detailModal','sourcesPanel','aboutPanel','uploadPanel'].forEach(closePanel);renderGrid()}
 
 function chicagoCite(d){
-  const domain=new URL(d.url).hostname.replace('www.','');
-  if(d.category==='Book') return `${d.attribution}. <i>${d.title}</i>. Accessed 2026. ${d.url}`;
-  if(d.category==='TV Series') return `${d.attribution}. "${d.title}." ${d.source}. Accessed 2026. ${d.url}`;
-  if(d.category==='Video') return `${d.attribution}. "${d.title}." Video. ${d.source}. Accessed 2026. ${d.url}`;
-  if(d.category==='Audio') return `${d.attribution}. "${d.title}." Audio. ${d.source}. Accessed 2026. ${d.url}`;
-  if(d.category==='PDF') return `${d.attribution}. "${d.title}." ${d.source}. Accessed 2026. ${d.url}`;
-  return `${d.attribution}. "${d.title}." <i>${d.source}</i>. Accessed 2026. ${d.url}`;
+  const n=`<a class="cite-name" onclick="event.stopPropagation();closePanel('sourcesPanel');openDetail(${d.id})">${d.attribution}</a>`;
+  const u=`<br><span class="cite-url">${d.url}</span>`;
+  if(d.category==='Book') return `<div class="cite-wrap">${n}. <i>${d.title}</i>. Accessed 2026.${u}</div>`;
+  if(d.category==='TV Series') return `<div class="cite-wrap">${n}. &ldquo;${d.title}.&rdquo; ${d.source}. Accessed 2026.${u}</div>`;
+  if(d.category==='Video') return `<div class="cite-wrap">${n}. &ldquo;${d.title}.&rdquo; Video. ${d.source}. Accessed 2026.${u}</div>`;
+  if(d.category==='Audio') return `<div class="cite-wrap">${n}. &ldquo;${d.title}.&rdquo; Audio. ${d.source}. Accessed 2026.${u}</div>`;
+  if(d.category==='PDF') return `<div class="cite-wrap">${n}. &ldquo;${d.title}.&rdquo; ${d.source}. Accessed 2026.${u}</div>`;
+  return `<div class="cite-wrap">${n}. &ldquo;${d.title}.&rdquo; <i>${d.source}</i>. Accessed 2026.${u}</div>`;
 }
 
 function buildSources(){
-  let h='<div class="tbl-head"><span style="width:40px">#</span><span style="flex:1">Citation (Chicago)</span><span style="width:90px">Type</span></div>';
+  let h='<div class="tbl-head"><span style="width:40px">#</span><span style="flex:1">Citation (Chicago)</span><span style="width:90px;flex:none">Type</span></div>';
   const sorted=[...archiveData].sort((a,b)=>a.attribution.localeCompare(b.attribution));
   h+=sorted.map((d,i)=>`<div class="tbl-row no-click">
     <div class="tbl-cell num">${String(i+1).padStart(2,'0')}</div>
@@ -774,6 +806,50 @@ hqNotes.addEventListener('input',function(){
     hqSaved.textContent='Saved '+now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   },600);
 });
+
+// CONNECTIONS
+function loadConnections(){try{const s=localStorage.getItem('arsArchiveConnections');return s?JSON.parse(s):{}}catch(e){return{}}}
+function saveConnections(c){localStorage.setItem('arsArchiveConnections',JSON.stringify(c))}
+function addConnection(fromId,toId){
+  const c=loadConnections();
+  if(!c[fromId])c[fromId]=[];
+  if(!c[fromId].includes(toId))c[fromId].push(toId);
+  if(!c[toId])c[toId]=[];
+  if(!c[toId].includes(fromId))c[toId].push(fromId);
+  saveConnections(c);
+  renderConnectionsUI(fromId);
+}
+function removeConnection(fromId,toId){
+  const c=loadConnections();
+  if(c[fromId])c[fromId]=c[fromId].filter(x=>x!==toId);
+  if(c[toId])c[toId]=c[toId].filter(x=>x!==fromId);
+  if(c[fromId]&&!c[fromId].length)delete c[fromId];
+  if(c[toId]&&!c[toId].length)delete c[toId];
+  saveConnections(c);
+  renderConnectionsUI(fromId);
+}
+function toggleLinkDropdown(id){
+  const dd=document.getElementById('linkDropdown-'+id);
+  if(!dd)return;
+  dd.classList.toggle('open');
+}
+function renderConnectionsUI(id){
+  const el=document.getElementById('connections-'+id);
+  if(!el)return;
+  const c=loadConnections();
+  const links=c[id]||[];
+  let html='';
+  links.forEach(lid=>{
+    const entry=archiveData.find(d=>d.id===lid);
+    if(entry) html+=`<div class="connection-item"><span class="connection-label">Linked to:</span> <a class="connection-link" onclick="openDetail(${entry.id})">${entry.title}</a><button class="connection-remove" onclick="event.stopPropagation();removeConnection(${id},${entry.id})" title="Remove link">&times;</button></div>`;
+  });
+  const available=archiveData.filter(d=>d.id!==id&&!links.includes(d.id));
+  if(available.length){
+    html+=`<div class="connection-add"><button class="connection-btn" onclick="toggleLinkDropdown(${id})">Link +</button><div class="connection-dropdown" id="linkDropdown-${id}">${available.map(d=>`<div class="connection-dd-item" onclick="event.stopPropagation();addConnection(${id},${d.id})">${d.title}<span class="connection-dd-type">${d.category}</span></div>`).join('')}</div></div>`;
+  }
+  el.innerHTML=html;
+}
+document.addEventListener('click',function(e){if(!e.target.closest('.connection-add'))document.querySelectorAll('.connection-dropdown.open').forEach(d=>d.classList.remove('open'))});
 
 loadSavedImages();loadUserEntries();renderGrid();
 </script>
